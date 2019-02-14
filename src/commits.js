@@ -19,10 +19,15 @@ const MERGE_PATTERNS = [
 ]
 
 export async function fetchCommits (remote, options, branch = null, onProgress) {
-  const command = branch ? `git log ${branch}` : 'git log'
+  let command = branch ? `git log --merges --first-parent ${branch}` : 'git log --merges --first-parent'
+
+  if (options.startingCommit) {
+    command = `git log HEAD...${options.startingCommit} --merges --first-parent`
+  }
+
   const format = await getLogFormat()
   const log = await cmd(`${command} --shortstat --pretty=format:${format}`, onProgress)
-  return parseCommits(log, remote, options)
+  return await parseCommits(log, remote, options)
 }
 
 async function getLogFormat () {
@@ -31,11 +36,15 @@ async function getLogFormat () {
   return `${COMMIT_SEPARATOR}%H%n%d%n%ai%n%an%n%ae%n${bodyFormat}${MESSAGE_SEPARATOR}`
 }
 
-function parseCommits (string, remote, options = {}) {
-  const commits = string
+async function parseCommits (string, remote, options = {}) {
+  let commits = string
     .split(COMMIT_SEPARATOR)
     .slice(1)
-    .map(commit => parseCommit(commit, remote, options))
+    .map(commit => parseMergeCommit(commit, remote, options))
+
+  commits = await Promise.all(commits)
+
+  commits = commits.flat() // parseCommit may return an array, flatten that
     .filter(commit => {
       if (options.ignoreCommitPattern) {
         return new RegExp(options.ignoreCommitPattern).test(commit.subject) === false
@@ -43,20 +52,25 @@ function parseCommits (string, remote, options = {}) {
       return true
     })
 
-  if (options.startingCommit) {
-    const index = commits.findIndex(c => c.hash.indexOf(options.startingCommit) === 0)
-    if (index === -1) {
-      throw new Error(`Starting commit ${options.startingCommit} was not found`)
-    }
-    return commits.slice(0, index + 1)
-  }
+  return commits
+}
 
+async function parseMergeCommit (commit, remote, options = {}) {
+  const [, hash, refs, date, author, email, tail] = commit.match(MATCH_COMMIT)
+
+  const command = `git log ${hash}^..${hash} --no-merges`
+  const format = await getLogFormat()
+  const log = commit + await cmd(`${command} --shortstat --pretty=format:${format}`)
+  const commits = log
+    .split(COMMIT_SEPARATOR)
+    .map(commit => parseCommit(commit, remote, options))
   return commits
 }
 
 function parseCommit (commit, remote, options = {}) {
   const [, hash, refs, date, author, email, tail] = commit.match(MATCH_COMMIT)
   const [message, stats] = tail.split(MESSAGE_SEPARATOR)
+
   return {
     hash,
     shorthash: hash.slice(0, 7),
