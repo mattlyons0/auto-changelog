@@ -19,6 +19,10 @@ const MERGE_PATTERNS = [
 ]
 
 export async function fetchCommits (remote, options, branch = null, onProgress) {
+  if(options.repoUrl){
+    remote.url = options.repoUrl
+  }
+
   let command = branch ? `git log --merges --first-parent ${branch}` : 'git log --merges --first-parent'
 
   if (options.startingCommit) {
