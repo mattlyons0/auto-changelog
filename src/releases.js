@@ -16,7 +16,8 @@ export function parseReleases (commits, remote, latestVersion, options) {
           href: getCompareLink(
             `${options.tagPrefix}${commit.tag}`,
             release.tag ? `${options.tagPrefix}${release.tag}` : 'HEAD',
-            remote
+            remote,
+            options
           ),
           commits: sliceCommits(release.commits.sort(sortCommits), options, release),
           major: !options.tagPattern && commit.tag && release.tag && semver.diff(commit.tag, release.tag) === 'major'
@@ -94,14 +95,14 @@ function filterCommit (commit, release, limit) {
   return true
 }
 
-function getCompareLink (from, to, remote) {
+function getCompareLink (from, to, remote, options) {
   if (!remote) {
     return null
   }
-  if (/bitbucket/.test(remote.hostname)) {
-    return `${remote.url}/compare/${to}..${from}`
+  if ((/bitbucket/.test(remote.hostname) && options.platform === undefined) || options.platform === 'bitbucket') {
+    return `${remote.url}/compare/diff?targetBranch=refs%2Ftags%2F${from}&sourceBranch=refs%2Ftags%2F${to}`
   }
-  if (/dev\.azure/.test(remote.hostname) || /visualstudio/.test(remote.hostname)) {
+  if ((/dev\.azure/.test(remote.hostname) || /visualstudio/.test(remote.hostname) && options.platform === undefined) || options.platform === 'azure') {
     return `${remote.url}/branches?baseVersion=GT${to}&targetVersion=GT${from}&_a=commits`
   }
   return `${remote.url}/compare/${from}...${to}`
