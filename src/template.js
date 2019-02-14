@@ -6,6 +6,11 @@ import { readFile, fileExists } from './utils'
 const TEMPLATES_DIR = join(__dirname, '..', 'templates')
 const MATCH_URL = /^https?:\/\/.+/
 
+Handlebars.registerHelper('cut', function(context, options) {
+  if(!context) return ''
+  return context.replace(RegExp(options.hash.re, 'g'), '')
+})
+
 Handlebars.registerHelper('json', function (object) {
   return new Handlebars.SafeString(JSON.stringify(object, null, 2))
 })
