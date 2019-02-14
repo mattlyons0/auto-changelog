@@ -57,7 +57,7 @@ export function parseLimit (limit) {
 }
 
 export function replaceText (string, options) {
-  if (!options.replaceText) {
+  if (!options.replaceText || !string) {
     return string
   }
   return Object.keys(options.replaceText).reduce((string, pattern) => {
