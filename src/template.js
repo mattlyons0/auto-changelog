@@ -11,6 +11,10 @@ Handlebars.registerHelper('cut', function(context, options) {
   return context.replace(RegExp(options.hash.re, 'g'), '')
 })
 
+Handlebars.registerHelper('indent', function(context, options) {
+  return '\t'
+})
+
 Handlebars.registerHelper('json', function (object) {
   return new Handlebars.SafeString(JSON.stringify(object, null, 2))
 })
@@ -79,7 +83,7 @@ function cleanTemplate (template) {
 }
 
 export async function compileTemplate (template, data) {
-  const compile = Handlebars.compile(await getTemplate(template))
+  const compile = Handlebars.compile(await getTemplate(template), {preventIndent: false})
   if (template === 'json') {
     return compile(data)
   }
