@@ -84,6 +84,7 @@ function parseCommit (commit, remote, options = {}) {
     tag: getTag(refs, options),
     subject: replaceText(getSubject(message), options),
     message: message.trim(),
+    body: replaceText(getBody(message), options).trim(),
     fixes: getFixes(message, author, remote, options),
     merge: getMerge(message, author, remote, options),
     href: getCommitLink(hash, remote),
@@ -117,6 +118,13 @@ function getSubject (message) {
     return '_No commit message_'
   }
   return message.match(/[^\n]+/)[0]
+}
+
+function getBody (message) {
+  if (!message) {
+    return '_No commit body_'
+  }
+  return message.match(/.*\n([\s\S]*)/)[1]
 }
 
 function getStats (stats) {
